@@ -73,6 +73,7 @@ def main(
     interactive: bool = True,
     max_new_tokens: int = 100,
     temperature: float = 1.0,
+    data_format: str = "bf16",
 ) -> None:
     world_size = int(os.getenv("WORLD_SIZE", "1"))
     rank = int(os.getenv("RANK", "0"))
@@ -152,6 +153,7 @@ def main(
     torch.manual_seed(33377335)
     with open(config) as f:
         args = ModelArgs(**json.load(f))
+    args.dtype = data_format
     if interactive:
         args.max_batch_size = 1
     print(args)
@@ -213,6 +215,7 @@ if __name__ == "__main__":
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=300)
     parser.add_argument("--temperature", type=float, default=0.6)
+    parser.add_argument("--data-format", type=str, choices=["bf16", "fp8"], default="bf16")
     args = parser.parse_args()
     assert args.input_file or args.interactive, "Either input-file or interactive mode must be specified"
-    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
+    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature, args.data_format)

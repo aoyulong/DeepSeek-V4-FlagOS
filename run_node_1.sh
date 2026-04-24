@@ -12,4 +12,4 @@ torchrun \
   --node_rank=1 \
   --master_addr=xxxx \
   --master_port=xxxx \
-    generate.py --ckpt-path path-to-bf16-mp16-ckpt --config config_flash_v4.json --input-file prompt.txt --max-new-tokens 48
+    generate.py --ckpt-path path-to-bf16-mp16-ckpt --config config_flash_v4.json --input-file prompt.txt --max-new-tokens 48 --data-format bf16

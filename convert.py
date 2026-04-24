@@ -80,7 +80,7 @@ mapping = {
 }
 
 
-def main(hf_ckpt_path, save_path, n_experts, mp, expert_dtype, o_groups=8):
+def main(hf_ckpt_path, save_path, n_experts, mp, expert_dtype, o_groups=8, data_format="bf16"):
     """
     Converts and saves model checkpoint files into a specified format.
 
@@ -90,6 +90,7 @@ def main(hf_ckpt_path, save_path, n_experts, mp, expert_dtype, o_groups=8):
         n_experts (int): Total number of experts in the model.
         mp (int): Model parallelism factor.
         o_groups (int): Number of output projection groups.
+        data_format (str): Data format for inference, "bf16" or "fp8".
 
     Returns:
         None
@@ -151,20 +152,21 @@ def main(hf_ckpt_path, save_path, n_experts, mp, expert_dtype, o_groups=8):
 
     for i in trange(mp):
         names = list(state_dicts[i].keys())
-        for name in names:
-            if name.endswith("wo_a.weight"):
-                weight = state_dicts[i][name]
-                scale = state_dicts[i].pop(name.replace("weight", "scale"))
-                weight = weight.unflatten(0, (-1, 128)).unflatten(-1, (-1, 128)).float() * scale[:, None, :, None].float()
-                state_dicts[i][name] = weight.flatten(2, 3).flatten(0, 1).bfloat16()
-            elif "experts" in name and state_dicts[i][name].dtype == torch.int8:
-                if expert_dtype == "fp8":
-                    scale_name = name.replace("weight", "scale")
-                    weight = state_dicts[i].pop(name)
-                    scale = state_dicts[i].pop(scale_name)
-                    state_dicts[i][name], state_dicts[i][scale_name] = cast_e2m1fn_to_e4m3fn(weight, scale)
-                else:
-                    state_dicts[i][name] = state_dicts[i][name].view(torch.float4_e2m1fn_x2)
+        if data_format != "bf16":
+            for name in names:
+                if name.endswith("wo_a.weight"):
+                    weight = state_dicts[i][name]
+                    scale = state_dicts[i].pop(name.replace("weight", "scale"))
+                    weight = weight.unflatten(0, (-1, 128)).unflatten(-1, (-1, 128)).float() * scale[:, None, :, None].float()
+                    state_dicts[i][name] = weight.flatten(2, 3).flatten(0, 1).bfloat16()
+                elif "experts" in name and state_dicts[i][name].dtype == torch.int8:
+                    if expert_dtype == "fp8":
+                        scale_name = name.replace("weight", "scale")
+                        weight = state_dicts[i].pop(name)
+                        scale = state_dicts[i].pop(scale_name)
+                        state_dicts[i][name], state_dicts[i][scale_name] = cast_e2m1fn_to_e4m3fn(weight, scale)
+                    else:
+                        state_dicts[i][name] = state_dicts[i][name].view(torch.float4_e2m1fn_x2)
         save_file(state_dicts[i], os.path.join(save_path, f"model{i}-mp{mp}.safetensors"))
 
     for file in ["tokenizer.json", "tokenizer_config.json"]:
@@ -182,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-parallel", type=int, required=True)
     parser.add_argument("--expert-dtype", type=str, choices=["fp8", "fp4"], required=False, default=None)
     parser.add_argument("--o-groups", type=int, default=8)
+    parser.add_argument("--data-format", type=str, choices=["bf16", "fp8", "fp4"], default="bf16")
     args = parser.parse_args()
     assert args.n_experts % args.model_parallel == 0, "Number of experts must be divisible by model parallelism"
-    main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel, args.expert_dtype, args.o_groups)
+    main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel, args.expert_dtype, args.o_groups, args.data_format)

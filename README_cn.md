@@ -11,6 +11,9 @@
 ### FP8/FP4 → BF16 权重转换工具
 支持将 DeepSeek-V3.2 的量化权重（MXFP4 E2M1 / FP8 E4M3）直接反量化为 BF16 格式，无需依赖 `kernel.py`，纯 PyTorch 实现。
 
+### 数据格式选择
+通过 `--data-format` 参数选择推理数据格式，支持 `bf16`（默认）和 `fp8`。`bf16` 模式下所有层使用 BF16 权重，QAT 量化模拟关闭；`fp8` 模式下使用原始 FP8 权重并启用 `act_quant`/`fp4_act_quant`（需要 `kernel` 模块）。
+
 ---
 
 ## 安装依赖
@@ -74,13 +77,13 @@ python convert.py --hf-ckpt-path ${HF_CKPT_PATH} --save-path ${SAVE_PATH} --n-ex
 ### 交互式对话
 
 ```bash
-torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --interactive --temperature ${T}
+torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --interactive --temperature ${T} --data-format bf16
 ```
 
 ### 文件批量推理
 
 ```bash
-torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --input-file ${FILE}
+torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --input-file ${FILE} --data-format bf16
 ```
 
 ### 单节点 8-GPU（MP8，启用 FlagGems）

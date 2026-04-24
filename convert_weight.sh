@@ -11,4 +11,4 @@ export SAVE_PATH=path-to-bf16-mp16-ckpt
 export EXPERTS=256
 # 当 MP > o_groups 时，设置 USE_OGROUPS_COMM=1 启用分组投影通信
 export USE_OGROUPS_COMM=1
-python convert.py --hf-ckpt-path ${HF_CKPT_PATH} --save-path ${SAVE_PATH} --n-experts ${EXPERTS} --model-parallel ${MP} --o-groups 8
+python convert.py --hf-ckpt-path ${HF_CKPT_PATH} --save-path ${SAVE_PATH} --n-experts ${EXPERTS} --model-parallel ${MP} --o-groups 8 --data-format bf16

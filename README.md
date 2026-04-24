@@ -11,6 +11,9 @@ When the model parallel size (MP) is greater than `o_groups`, set the environmen
 ### FP8/FP4 → BF16 Weight Conversion Tool
 Supports dequantizing DeepSeek-V3.2 quantized weights (MXFP4 E2M1 / FP8 E4M3) directly to BF16 format, implemented in pure PyTorch without depending on `kernel.py`.
 
+### Data Format Selection
+Use `--data-format` to select the inference data format. Supported values: `bf16` (default), `fp8`. In `bf16` mode, all layers use BF16 weights and QAT quantization simulation is disabled. In `fp8` mode, layers use the original FP8 weights with `act_quant`/`fp4_act_quant` enabled (requires `kernel` module).
+
 ---
 
 ## Installation
@@ -74,13 +77,13 @@ python convert.py --hf-ckpt-path ${HF_CKPT_PATH} --save-path ${SAVE_PATH} --n-ex
 ### Interactive Chat
 
 ```bash
-torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --interactive --temperature ${T}
+torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --interactive --temperature ${T} --data-format bf16
 ```
 
 ### Batch Inference from File
 
 ```bash
-torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --input-file ${FILE}
+torchrun --nproc-per-node ${MP} generate.py --ckpt-path ${SAVE_PATH} --config ${CONFIG} --input-file ${FILE} --data-format bf16
 ```
 
 ### Single Node 8-GPU (MP8, with FlagGems)
